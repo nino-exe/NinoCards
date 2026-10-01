@@ -1,0 +1,142 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="NinoCards">
+<meta name="theme-color" content="#000000">
+<title>NinoCards</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" href="icon.png">
+<style>
+  :root { --bg:#f2f2f7; --card:#fff; --text:#000; --sub:#8e8e93; --sep:rgba(60,60,67,.18); --accent:#0a84ff; --chip:#e5e5ea; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#000; --card:#1c1c1e; --text:#fff; --sub:#8e8e93; --sep:rgba(84,84,88,.6); --chip:#2c2c2e; } }
+  * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
+  html, body { background:var(--bg); color:var(--text); font:17px -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif; touch-action:manipulation; overscroll-behavior-y:none; }
+  img { -webkit-user-drag:none; pointer-events:none; display:block; width:100%; }
+  header { position:sticky; top:0; z-index:5; padding:calc(env(safe-area-inset-top) + 12px) 16px 8px; background:color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter:saturate(180%) blur(20px); -webkit-backdrop-filter:saturate(180%) blur(20px); border-bottom:.5px solid var(--sep); }
+  h1 { font-size:34px; font-weight:700; letter-spacing:.4px; }
+  .chips { display:flex; gap:8px; overflow-x:auto; padding:10px 0 4px; scrollbar-width:none; }
+  .chips::-webkit-scrollbar { display:none; }
+  .chip { flex:none; border:0; padding:7px 14px; border-radius:99px; background:var(--chip); color:var(--text); font:600 15px inherit; font-family:inherit; }
+  .chip.on { background:var(--text); color:var(--bg); }
+  main { padding:8px 16px calc(env(safe-area-inset-bottom) + 24px); }
+  h2 { font-size:22px; font-weight:700; margin:20px 0 10px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:14px; }
+  .item { background:none; border:0; padding:0; text-align:left; color:inherit; font-family:inherit; transition:transform .15s; }
+  .item:active { transform:scale(.96); }
+  .item img { aspect-ratio:1.586; object-fit:cover; border-radius:10px; box-shadow:0 4px 14px rgba(0,0,0,.18); background:var(--chip); }
+  .item span { display:block; font-size:13px; color:var(--sub); margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sheet-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); opacity:0; pointer-events:none; transition:opacity .25s; z-index:10; }
+  .sheet { position:fixed; left:0; right:0; bottom:0; z-index:11; background:var(--card); border-radius:14px 14px 0 0; padding:8px 20px calc(env(safe-area-inset-bottom) + 20px); transform:translateY(100%); transition:transform .3s cubic-bezier(.2,.8,.2,1); max-width:600px; margin:0 auto; }
+  .open .sheet-bg { opacity:1; pointer-events:auto; }
+  .open .sheet { transform:none; }
+  .grabber { width:36px; height:5px; border-radius:3px; background:var(--sep); margin:0 auto 16px; }
+  .sheet img { border-radius:14px; aspect-ratio:1.586; object-fit:cover; box-shadow:0 10px 30px rgba(0,0,0,.3); }
+  .sheet h3 { font-size:20px; margin:16px 0 2px; }
+  .sheet p { color:var(--sub); font-size:15px; margin-bottom:18px; }
+  .btn { display:block; text-align:center; text-decoration:none; padding:15px; border-radius:12px; font-weight:600; font-size:17px; background:var(--accent); color:#fff; }
+  .btn:active { opacity:.7; }
+</style>
+</head>
+<body>
+<header>
+  <h1>NinoCards</h1>
+  <div class="chips" id="chips"></div>
+</header>
+<main id="list"></main>
+
+<div id="sheetWrap">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet">
+    <div class="grabber"></div>
+    <img id="sImg" alt="">
+    <h3 id="sName"></h3>
+    <p id="sCat"></p>
+    <a class="btn" id="sDl" download>Add to Wallet</a>
+  </div>
+</div>
+
+<script>
+const CARDS = [
+  ["Revolut", "Revolut", "CardArt-revolut-EYkP20tqXo.png"],
+  ["Revolut", "Revolut II", "CardArt-revolut-ZOxVu2h8KI.png"],
+  ["Revolut", "Chrome", "CardArt-revolut-chrome-bv6onHyjdN.png"],
+  ["Revolut", "Audi F1 Team Ultra", "CardArt-revolut-audi-f1-team-ultra-8tl76QGkzP.png"],
+  ["Revolut", "Gold", "revolutgold.jpg"],
+  ["Revolut", "Audi F1 Team", "CardArt-revolut-LLrtvh2ncR.png"],
+  ["Revolut", "Gradient", "CardArt-XkFHaRq3Zg.png"],
+  ["Revolut", "Black", "CardArt-black-revolut-5jaGhZsUY9.png"],
+  ["Apple", "Apple Card", "AppleCard.png"],
+  ["Apple", "Apple", "CardArt-apple-oCvosRUL75.png"],
+  ["Apple", "Liquid Glass", "CardArt-apple-liquid-glass-r6381QWUmy.png"],
+  ["Apple", "Apple Account", "CardArt-apple-account-qaAxLJBd1m.png"],
+  ["Apple", "Apple Cash", "CardArt-apple-cash-221SswCrlv.png"],
+  ["Apple", "Apple Cash Liquid Glass", "CardArt-apple-cash-liquid-glass-DTHKHxAtyK.png"],
+  ["Apple", "Hello", "CardArt-hello-uryer2d55G.png"],
+  ["Apple", "Transit Card", "CardArt-xbEC0YkZ9m.png"],
+  ["Apple", "Apple Pay White", "CardArt-0x4ObE45tm.png"],
+  ["Apple", "Apple Pay Black", "CardArt-rmxeNd5sxn.png"],
+  ["Apple", "Apple Logo", "CardArt-PGMoMuOF9O.png"],
+  ["American Express", "Platinum", "CardArt-3AUQeNPlEz.png"],
+  ["American Express", "Business Platinum", "CardArt-american-express-business-platinum-card-O7BcIkaRu4.png"],
+  ["American Express", "Gold", "CardArt-american-express-gold-card-Ckzksw0UQb.png"],
+  ["American Express", "Black", "amex-black.png"],
+  ["American Express", "Delta SkyMiles Business", "CardArt-Be8EAKw7kY.png"],
+  ["American Express", "Platinum Garden", "CardArt-tjtp0178Fm.png"],
+  ["Banks & Payments", "Chase", "CardArt-chase-gradient-dark-blue-wHnDg5SvkO.png"],
+  ["Banks & Payments", "Sapphire Reserve", "CardArt-8cq1E7PpGz.png"],
+  ["Banks & Payments", "Sapphire Reserve Business", "CardArt-T45BpPWWld.png"],
+  ["Banks & Payments", "Bank of America Premium Rewards", "CardArt-AnIo15Y2mB.png"],
+  ["Banks & Payments", "PayPal", "CardArt-paypal-vslg6E8O5l.png"],
+  ["Banks & Payments", "Cash App Metal", "CardArt-cash-app-metal-sRcpD80Dnw.png"],
+  ["Banks & Payments", "Stripe", "CardArt-stripe-Hc6lfG5Rvs.png"],
+  ["Banks & Payments", "Klarna Max", "CardArt-klarna-max-WbbBUsnw1K.png"],
+  ["Banks & Payments", "Bitcoin", "CardArt-btc-card-q55PAxQflO.png"],
+  ["Banks & Payments", "Solana", "CardArt-t6AyWOUtSj.png"],
+  ["Banks & Payments", "Phantom", "CardArt-MH2LeGmMqc.png"],
+  ["Gaming", "Grand Theft Auto VI", "CardArt-grand-theft-auto-vi-697UNrCoSu.png"],
+  ["Gaming", "Maze Bank of Los Santos", "CardArt-maze-bank-of-los-santos-gta-v-qUALNtxIMt.png"],
+  ["Food & Drink", "KFC", "CardArt-vrTuNNMU9N.png"],
+  ["Food & Drink", "Starbucks", "CardArt-drdG3AtyQq.png"],
+  ["Food & Drink", "McDonald's", "CardArt-u5kTxKVVIs.png"],
+  ["Cars", "Tesla", "CardArt-tesla-19DFonBTst.png"],
+  ["Cars", "BMW M", "CardArt-8rTzwDVpzU.png"],
+  ["Cars", "BYD", "CardArt-okpDRbnJi4.png"],
+  ["Other", "TikTok Creator", "tiktok-creator.png"],
+  ["Other", "X Debit", "CardArt-gygMXDP046.png"],
+  ["Other", "X", "CardArt-Fqc4NofIzX.png"],
+  ["Other", "Blue Screen", "CardArt-oHjCo8ZdQ9.png"],
+];
+const cats = [...new Set(CARDS.map(c => c[0]))];
+let current = "All";
+const $ = id => document.getElementById(id);
+
+function render() {
+  $("chips").innerHTML = ["All", ...cats].map(c => `<button class="chip${c === current ? " on" : ""}">${c}</button>`).join("");
+  $("list").innerHTML = (current === "All" ? cats : [current]).map(cat => `
+    <h2>${cat}</h2>
+    <div class="grid">${CARDS.filter(c => c[0] === cat).map(c =>
+      `<button class="item" data-f="${c[2]}"><img src="${c[2]}" loading="lazy" alt=""><span>${c[1]}</span></button>`).join("")}</div>`).join("");
+}
+$("chips").onclick = e => { if (e.target.classList.contains("chip")) { current = e.target.textContent; render(); scrollTo(0, 0); } };
+$("list").onclick = e => {
+  const b = e.target.closest(".item"); if (!b) return;
+  const [cat, name, f] = CARDS.find(c => c[2] === b.dataset.f);
+  $("sImg").src = f; $("sName").textContent = name; $("sCat").textContent = cat;
+  $("sDl").href = f; $("sDl").download = f;
+  document.body.classList.add("open");
+};
+$("sheetBg").onclick = () => document.body.classList.remove("open");
+// block pinch / double-tap zoom on iOS Safari (it ignores user-scalable=no)
+document.addEventListener("gesturestart", e => e.preventDefault());
+document.addEventListener("dblclick", e => e.preventDefault(), { passive: false });
+render();
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
